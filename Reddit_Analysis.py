@@ -201,4 +201,4 @@ for post in example1['data']['children']:
 
     #  The overall goal of this assignment is to look at the most engaged subreddit of the day using the 'top' of that subreddit for the past 24 hours when looking at the default subreddits.
 
-    #  Have an if __name__ == '__main__': have take in system arguments so that it can the user can setup the database, add, subtract, and finially plot.
+    #  Have an if __name__ == '__main__': have take in system arguments so that it can the user can setup the database, add, subtract, and finally plot.
