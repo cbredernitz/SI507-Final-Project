@@ -1,5 +1,4 @@
 import json
-import sys
 import psycopg2
 import psycopg2.extras
 import requests
@@ -7,7 +6,8 @@ import requests.auth
 from reddit_secret import client_id, client_secret, username, password
 import sys
 import os, datetime
-import plotly
+import matplotlib.pyplot as plt
+import numpy
 
 CACHE_FNAME = 'cache_contents.json'
 CACHE_CREDS = 'creds.json'
@@ -23,7 +23,6 @@ TOKEN_URL = 'https://www.reddit.com/api/v1/access_token'
 SCOPE_STRING = ['identity', 'edit', 'flair', 'history', 'mysubreddits', 'privatemessages', 'read', 'report', 'save', 'submit', 'subscribe', 'vote', 'wikiedit', 'wikiread']
 
 ##### CACHING FUNCTIONS #####
-
 try:
     with open(CACHE_FNAME, 'r') as cache_file:
         cache_json = cache_file.read()
@@ -32,7 +31,6 @@ except:
     CACHE_DICTION = {}
 
 ##### Caching function from Project 2 #####
-
 def load_cache():
     global CACHE_DICTION
     try:
@@ -62,6 +60,22 @@ def save_token(token_dict):
         token_json = json.dumps(token_dict)
         creds.write(token_json)
 
+def check_cache_time():
+    t = os.path.getctime('cache_contents.json')
+    created_time = datetime.datetime.fromtimestamp(t)
+    now = datetime.datetime.now()
+
+    # subtracting two datetime objects gives you a timedelta object
+    delta = now - created_time
+    delta_in_days = delta.seconds
+
+    # now that we have days as integers, we can just use comparison
+    # and decide if the token has expired or not
+    if delta_in_days <= 1:
+        return False
+    else:
+        return True
+
 def check_token_time():
     t = os.path.getctime('creds.json')
     created_time = datetime.datetime.fromtimestamp(t)
@@ -78,6 +92,7 @@ def check_token_time():
     else:
         return True
 
+
 ##### Setting up the database connection #####
 try:
     conn = psycopg2.connect("dbname = '507_Final_Project' user = 'Chris'")
@@ -92,18 +107,18 @@ cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 ##### Seting up the database #####
 def setup_database():
     cur.execute("""CREATE TABLE IF NOT EXISTS Subreddits(
-                ID SERIAL PRIMARY KEY NOT NULL,
+                ID SERIAL PRIMARY KEY,
                 Name VARCHAR(128) UNIQUE NOT NULL
                 )""")
 
     cur.execute("""CREATE TABLE IF NOT EXISTS Postings(
-                ID SERIAL NOT NULL,
-                Title VARCHAR(128) NOT NULL,
+                ID SERIAL PRIMARY KEY,
+                Title VARCHAR(255) NOT NULL,
                 Score INTEGER NOT NULL,
                 Created_Time VARCHAR(128) NOT NULL,
                 Subreddit_ID INTEGER REFERENCES Subreddits(ID),
-                Guilded INTEGER NOT NULL,
-                Permalink VARCHAR(128),
+                Gilded INTEGER NOT NULL,
+                Permalink TEXT,
                 Kind TEXT)""")
 
     conn.commit()
@@ -116,6 +131,7 @@ def start_reddit_session():
     response = requests.post("https://www.reddit.com/api/v1/access_token", auth=client_auth, data=post_data, headers=headers)
     cred = json.loads(response.text)
     save_token(cred)
+
 
 def make_request(subreddit):
     # try:
@@ -140,7 +156,7 @@ def make_request(subreddit):
 class Post(object):
     """Organizing data of each reddit post"""
     def __init__(self, post_dict):
-        self.title = post_dict['data']['title']
+        self.title = post_dict['data']['title'][:255]
         self.subreddit = post_dict['data']['subreddit']
         self.time_created = post_dict['data']['created_utc']
         self.permalink = post_dict['data']['permalink']
@@ -159,107 +175,75 @@ class Post(object):
         elif post_dict['kind'] == 't6':
             self.kind = 'Award'
 
-    def get_subreddit():
+    def get_subreddit(self):
         return {'subreddit': self.subreddit}
 
-    def get_posting_dict():
-        return {
-            'title': self.title,
-            'time_created': self.time_created,
-            'permalink': self.permalink,
-            'gilded': self.gilded,
-            'score': self.score,
-            'kind': self.kind
-            }
-
-    def __contains__():
+    def __contains__(self):
         pass
-    def __repr__():
+    def __repr__(self):
         pass
 
-default_subreddits = ['Art', 'AskReddit', 'askscience', 'aww',
-                    'blog', 'books', 'creepy', 'dataisbeautiful', 'DIY', 'Documentaries',
-                    'EarthPorn', 'explainlikeimfive', 'food', 'funny', 'Futurology',
-                    'gadgets', 'gaming', 'GetMotivated', 'gifs', 'history', 'IAmA',
-                    'InternetIsBeautiful', 'Jokes', 'LifeProTips', 'listentothis',
-                    'mildlyinteresting', 'movies', 'Music', 'news', 'nosleep',
-                    'nottheonion', 'OldSchoolCool', 'personalfinance', 'philosophy',
-                    'photoshopbattles', 'pics', 'science', 'Showerthoughts',
-                    'space', 'sports', 'television', 'tifu', 'todayilearned',
-                    'UpliftingNews', 'videos', 'worldnews']
 
-#  adds a subreddit to the list to be analysed
-def addSubreddit(subreddit):
-    return default_subreddits.append(subreddit)
-
-#  removes a subreddit from the list being analysed
-def subtractSubreddit(subreddit):
-    if subreddit not in default_subreddits:
-        return False
+def get_cache_or_live_data(subreddit):
+    if subreddit not in CACHE_DICTION and check_cache_time():
+        print("-- Fetching new content for the day's activity for " + subreddit + " --")
+        response = make_request(subreddit)
+        CACHE_DICTION[subreddit] = response
+        save_cache()
     else:
-        return default_subreddits.remove(subreddit)
-
-def cache():
-    try:
-        t = os.path.getctime('cache_contents.json')
-        created_time = datetime.datetime.fromtimestamp(t)
-        now = datetime.datetime.now()
-
-        # subtracting two datetime objects gives you a timedelta object
-        delta = now - created_time
-        delta_in_days = delta.days
-
-        # now that we have days as integers, we can just use comparison
-        # and decide if the token has expired or not
-        if delta_in_days <= 1:
-            print('-- Pulling from cache --')
-            load_cache()
-            results = CACHE_DICTION
-    except:
-        print("-- Fetching new content for the day's activity --")
-        for sub in default_subreddits:
-            if sub not in CACHE_DICTION:
-                response = make_request(sub)
-                CACHE_DICTION[sub] = response
-                save_cache()
+        print('-- Pulling data on '+ subreddit +' from cache --')
+        load_cache()
         results = CACHE_DICTION
-    ls = []
-    for sub_dict in CACHE_DICTION:
-        value = CACHE_DICTION[sub_dict]
-        ls.append(Post(value['data']['children']))
-    print(ls)
+    return CACHE_DICTION[subreddit]
 
-cache()
-# def write_database():
-#     results = cache()
-#     for data in results[]
 
-# default_responses = []
-# for x in default_subreddits:
-#     default_responses.append(make_request(x))
+def searching(subreddit):
+    response = get_cache_or_live_data(subreddit)
+    if response == None:
+        print("Are you sure that is a real Subreddit?")
+    else:
+        for post_dict in response['data']['children']:
+            post_obj = Post(post_dict)
+            cur.execute("""INSERT INTO
+                Subreddits(Name)VALUES(%(subreddit)s)on CONFLICT DO NOTHING RETURNING ID""", post_obj.get_subreddit())
 
-# post_inst = []
-# example1 = make_request('pics')
-# # print(example1)
-# for post in example1['data']['children']:
-#     post_inst.append(Post(post))
+            conn.commit()
 
-#  Testing csv output
-# with open('testing.csv', 'w', newline = '') as test:
-#     test_writer = csv.writer(test, delimiter = ',')
-#     test_writer.writerow(['title',
-#                         'permalink',
-#                         'domain',
-#                         'score',
-#                         'kind'])
-#     for info in post_inst:
-#         test_writer.writerow([info.title,
-#                             info.permalink,
-#                             info.domain,
-#                             info.score,
-#                             info.kind])
-# test.close()
+            try:
+                subreddit_id = cur.fetchone()
+                subreddit_id = subreddit_id['id']
 
+            except:
+                cur.execute("SELECT Subreddits.ID FROM Subreddits WHERE Subreddits.Name = %s", (post_obj.subreddit,))
+                subreddit_id = cur.fetchone()
+                subreddit_id = subreddit_id['id']
+
+            cur.execute("""INSERT INTO Postings(subreddit_id, title, score, created_time, gilded, permalink, kind) VALUES(%s, %s, %s, %s, %s, %s, %s) on conflict do nothing""", (subreddit_id, post_obj.title, post_obj.score, post_obj.time_created, post_obj.gilded, post_obj.permalink, post_obj.kind))
+
+            conn.commit()
+
+
+def run_example():
+    default_subreddits = ['Art', 'AskReddit','nottheonion', 'OldSchoolCool', 'personalfinance', 'science', 'Showerthoughts']
+    for sub in default_subreddits:
+        searching(sub)
+
+# def ploting():
+#     plt
+
+# IDEAS #
+# Write DB as I make the requests
+# The make request function will do both
+
+#  Look at removing the default list of just add it to the make request.
+#  Possibly take out the add/subtract function.  Might be too complex at this point.
+# then I coudl end it with a sample 5 requests to get things loaded in.
+
+
+# THINGS TO DO:
+    # plotting
+    # timer on expire cache after a day
+        #
 # ____________________________________________
 
 if __name__ == "__main__":
@@ -277,21 +261,11 @@ if __name__ == "__main__":
     elif command == 'token':
         start_reddit_session()
 
-    elif command == 'write':
-        load_cache()
-        print('-- Writting database --')
-        write_database()
+    elif command == 'search':
+        searching(subreddit)
 
-    elif command == 'add':
-        print('-- Adding ' + subreddit + ' to Analysis --')
-        addSubreddit(subreddit)
+    elif command == 'example':
+        run_example()
 
-    elif command == 'remove':
-        if not subtractSubreddit(subreddit):
-            print(subreddit + " doesn't appear to be in the analysis")
-        else:
-            print('-- Removing ' + subreddit + ' from Analysis --')
-            subtractSubreddit(subreddit)
-
-    # elif command == 'plot':
-        # run plotting function
+    elif command == 'plot':
+        plot()
