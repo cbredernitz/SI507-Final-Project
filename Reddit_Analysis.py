@@ -6,8 +6,9 @@ import requests.auth
 from reddit_secret import client_id, client_secret, username, password
 import sys
 import os, datetime
-import matplotlib.pyplot as plt
-import numpy
+import plotly as py
+import plotly.graph_objs as go
+import webbrowser
 
 CACHE_FNAME = 'cache_contents.json'
 CACHE_CREDS = 'creds.json'
@@ -22,80 +23,11 @@ AUTHORIZATION_URL = 'https://ssl.reddit.com/api/v1/authorize'
 TOKEN_URL = 'https://www.reddit.com/api/v1/access_token'
 SCOPE_STRING = ['identity', 'edit', 'flair', 'history', 'mysubreddits', 'privatemessages', 'read', 'report', 'save', 'submit', 'subscribe', 'vote', 'wikiedit', 'wikiread']
 
-##### CACHING FUNCTIONS #####
-try:
-    with open(CACHE_FNAME, 'r') as cache_file:
-        cache_json = cache_file.read()
-        CACHE_DICTION = json.loads(cache_json)
-except:
-    CACHE_DICTION = {}
-
-##### Caching function from Project 2 #####
-def load_cache():
-    global CACHE_DICTION
-    try:
-        cache_file = open(CACHE_FNAME, 'r')
-        cache_contents = cache_file.read()
-        CACHE_DICTION = json.loads(cache_contents)
-        cache_file.close()
-    except:
-        CACHE_DICTION = {}
-
-def save_cache():
-    full_text = json.dumps(CACHE_DICTION)
-    cache_file_ref = open(CACHE_FNAME,"w")
-    cache_file_ref.write(full_text)
-    cache_file_ref.close()
-
-#  Gets the saved token from the cache
-def get_saved_token():
-    with open(CACHE_CREDS, 'r') as creds:
-        token_json = creds.read()
-        token_dict = json.loads(token_json)
-        return token_dict['access_token']
-
-#  Saves token from authentication
-def save_token(token_dict):
-    with open(CACHE_CREDS, 'w') as creds:
-        token_json = json.dumps(token_dict)
-        creds.write(token_json)
-
-def check_cache_time():
-    t = os.path.getctime('cache_contents.json')
-    created_time = datetime.datetime.fromtimestamp(t)
-    now = datetime.datetime.now()
-
-    # subtracting two datetime objects gives you a timedelta object
-    delta = now - created_time
-    delta_in_days = delta.seconds
-
-    # now that we have days as integers, we can just use comparison
-    # and decide if the token has expired or not
-    if delta_in_days <= 1:
-        return False
-    else:
-        return True
-
-def check_token_time():
-    t = os.path.getctime('creds.json')
-    created_time = datetime.datetime.fromtimestamp(t)
-    now = datetime.datetime.now()
-
-    # subtracting two datetime objects gives you a timedelta object
-    delta = now - created_time
-    delta_in_seconds = delta.seconds
-
-    # now that we have seconds as integers, we can just use comparison
-    # and decide if the token has expired or not
-    if delta_in_seconds <= 3600:
-        return False
-    else:
-        return True
-
+CACHE_DICTION = {}
 
 ##### Setting up the database connection #####
 try:
-    conn = psycopg2.connect("dbname = '507_Final_Project' user = 'Chris'")
+    conn = psycopg2.connect("dbname = '507_Final_Project_2' user = 'Chris'")
     print("Success connecting to the database")
 
 except:
@@ -123,6 +55,73 @@ def setup_database():
 
     conn.commit()
 
+##### Caching function from Project 2 #####
+def check_cache_time():
+    t = os.path.getctime('cache_contents.json')
+    created_time = datetime.datetime.fromtimestamp(t)
+    now = datetime.datetime.now()
+
+    # subtracting two datetime objects gives you a timedelta object
+    delta = now - created_time
+    delta_in_days = delta.days
+
+    # now that we have days as integers, we can just use comparison
+    # and decide if the token has expired or not
+    if delta_in_days <= 1:
+        return False
+    else:
+        return True
+
+def load_cache():
+    global CACHE_DICTION
+    try:
+        cache_file = open(CACHE_FNAME, 'r')
+        cache_contents = cache_file.read()
+        CACHE_DICTION = json.loads(cache_contents)
+        cache_file.close()
+        cur.execute("DELETE FROM Postings")
+        conn.commit()
+        if check_cache_time():
+            CACHE_DICTION = {}
+            os.remove('cache_contents.json')
+    except:
+        CACHE_DICTION = {}
+
+def save_cache():
+    full_text = json.dumps(CACHE_DICTION)
+    cache_file_ref = open(CACHE_FNAME,"w")
+    cache_file_ref.write(full_text)
+    cache_file_ref.close()
+
+#  Gets the saved token from the cache
+def get_saved_token():
+    with open(CACHE_CREDS, 'r') as creds:
+        token_json = creds.read()
+        token_dict = json.loads(token_json)
+        return token_dict['access_token']
+
+#  Saves token from authentication
+def save_token(token_dict):
+    with open(CACHE_CREDS, 'w') as creds:
+        token_json = json.dumps(token_dict)
+        creds.write(token_json)
+
+def check_token_time():
+    t = os.path.getctime('creds.json')
+    created_time = datetime.datetime.fromtimestamp(t)
+    now = datetime.datetime.now()
+
+    # subtracting two datetime objects gives you a timedelta object
+    delta = now - created_time
+    delta_in_seconds = delta.seconds
+
+    # now that we have seconds as integers, we can just use comparison
+    # and decide if the token has expired or not
+    if delta_in_seconds <= 3600:
+        return False
+    else:
+        return True
+
 #  Authenticates and creates an instance of authentication to call to
 def start_reddit_session():
     client_auth = requests.auth.HTTPBasicAuth(client_id, client_secret)
@@ -134,17 +133,10 @@ def start_reddit_session():
 
 
 def make_request(subreddit):
-    # try:
     token = get_saved_token()
 
     if check_token_time():
         start_reddit_session()
-
-    # except FileNotFoundError:
-    #     token = None
-    #
-    # if not token:
-    #     start_reddit_session()
 
     else:
         headers = {"Authorization": "bearer "+ token, "User-Agent": "test script by /u/Inept_P_Hacker"}
@@ -180,70 +172,84 @@ class Post(object):
 
     def __contains__(self):
         pass
+
     def __repr__(self):
         pass
 
 
 def get_cache_or_live_data(subreddit):
-    if subreddit not in CACHE_DICTION and check_cache_time():
+    if subreddit not in CACHE_DICTION:
         print("-- Fetching new content for the day's activity for " + subreddit + " --")
         response = make_request(subreddit)
         CACHE_DICTION[subreddit] = response
         save_cache()
     else:
         print('-- Pulling data on '+ subreddit +' from cache --')
-        load_cache()
         results = CACHE_DICTION
     return CACHE_DICTION[subreddit]
 
 
 def searching(subreddit):
     response = get_cache_or_live_data(subreddit)
-    if response == None:
-        print("Are you sure that is a real Subreddit?")
-    else:
-        for post_dict in response['data']['children']:
-            post_obj = Post(post_dict)
-            cur.execute("""INSERT INTO
-                Subreddits(Name)VALUES(%(subreddit)s)on CONFLICT DO NOTHING RETURNING ID""", post_obj.get_subreddit())
+    for post_dict in response['data']['children']:
+        post_obj = Post(post_dict)
+        cur.execute("""INSERT INTO
+            Subreddits(Name)VALUES(%(subreddit)s)on CONFLICT DO NOTHING RETURNING ID""", post_obj.get_subreddit())
 
-            conn.commit()
+        conn.commit()
 
-            try:
-                subreddit_id = cur.fetchone()
-                subreddit_id = subreddit_id['id']
+        try:
+            subreddit_id = cur.fetchone()
+            subreddit_id = subreddit_id['id']
 
-            except:
-                cur.execute("SELECT Subreddits.ID FROM Subreddits WHERE Subreddits.Name = %s", (post_obj.subreddit,))
-                subreddit_id = cur.fetchone()
-                subreddit_id = subreddit_id['id']
+        except:
+            cur.execute("SELECT Subreddits.ID FROM Subreddits WHERE Subreddits.Name = %s", (post_obj.subreddit,))
+            subreddit_id = cur.fetchone()
+            subreddit_id = subreddit_id['id']
 
-            cur.execute("""INSERT INTO Postings(subreddit_id, title, score, created_time, gilded, permalink, kind) VALUES(%s, %s, %s, %s, %s, %s, %s) on conflict do nothing""", (subreddit_id, post_obj.title, post_obj.score, post_obj.time_created, post_obj.gilded, post_obj.permalink, post_obj.kind))
+        cur.execute("""INSERT INTO Postings(subreddit_id, title, score, created_time, gilded, permalink, kind) VALUES(%s, %s, %s, %s, %s, %s, %s) on conflict do nothing""", (subreddit_id, post_obj.title, post_obj.score, post_obj.time_created, post_obj.gilded, post_obj.permalink, post_obj.kind))
 
-            conn.commit()
+        conn.commit()
 
-
-def run_example():
-    default_subreddits = ['Art', 'AskReddit','nottheonion', 'OldSchoolCool', 'personalfinance', 'science', 'Showerthoughts']
+def run_search_on_default():
+    default_subreddits = ['Art', 'AskReddit', 'askscience', 'aww',
+                    'blog', 'books', 'creepy', 'dataisbeautiful', 'DIY', 'Documentaries',
+                    'EarthPorn', 'explainlikeimfive', 'food', 'funny', 'Futurology',
+                    'gadgets', 'gaming', 'GetMotivated', 'gifs', 'history', 'IAmA',
+                    'InternetIsBeautiful', 'Jokes', 'LifeProTips', 'listentothis',
+                    'mildlyinteresting', 'movies', 'Music', 'news', 'nosleep',
+                    'nottheonion', 'OldSchoolCool', 'personalfinance', 'philosophy',
+                    'photoshopbattles', 'pics', 'science', 'Showerthoughts',
+                    'space', 'sports', 'television', 'tifu', 'todayilearned',
+                    'UpliftingNews', 'videos', 'worldnews']
     for sub in default_subreddits:
         searching(sub)
 
-# def ploting():
-#     plt
+def plot():
+    cur.execute("""SELECT Subreddits.Name, sum(Postings.score) FROM Postings INNER JOIN Subreddits on Subreddits.ID = Postings.subreddit_id GROUP BY Subreddits.Name""")
+    dic = cur.fetchall()
+    subreddits = []
+    scores = []
+    for subreddit in dic:
+        subreddits.append(subreddit[0])
+        scores.append(subreddit[1])
 
-# IDEAS #
-# Write DB as I make the requests
-# The make request function will do both
+    data = [go.Bar(
+            x=subreddits,
+            y=scores,
+            text=scores,
+            textposition = 'auto',
+            marker=dict(
+                color='rgb(158,202,225)',
+                line=dict(
+                    color='rgb(8,48,107)',
+                    width=1.5),
+            ),
+            opacity=0.6
+        )]
+    print('opening...')
+    py.offline.plot(data, filename="subreddit_analysis.html")
 
-#  Look at removing the default list of just add it to the make request.
-#  Possibly take out the add/subtract function.  Might be too complex at this point.
-# then I coudl end it with a sample 5 requests to get things loaded in.
-
-
-# THINGS TO DO:
-    # plotting
-    # timer on expire cache after a day
-        #
 # ____________________________________________
 
 if __name__ == "__main__":
@@ -261,11 +267,9 @@ if __name__ == "__main__":
     elif command == 'token':
         start_reddit_session()
 
-    elif command == 'search':
-        searching(subreddit)
-
-    elif command == 'example':
-        run_example()
+    elif command == 'write':
+        load_cache()
+        run_search_on_default()
 
     elif command == 'plot':
         plot()
