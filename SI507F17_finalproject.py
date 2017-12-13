@@ -212,7 +212,7 @@ def searching(subreddit):
         conn.commit()
 
 def run_search_on_default():
-    default_subreddits = ['Art', 'AskReddit', 'askscience', 'aww',
+    default_subreddits = ['art', 'AskReddit', 'askscience', 'aww',
                     'blog', 'books', 'creepy', 'dataisbeautiful', 'DIY', 'Documentaries',
                     'EarthPorn', 'explainlikeimfive', 'food', 'funny', 'Futurology',
                     'gadgets', 'gaming', 'GetMotivated', 'gifs', 'history', 'IAmA',
@@ -223,7 +223,7 @@ def run_search_on_default():
                     'space', 'sports', 'television', 'tifu', 'todayilearned',
                     'UpliftingNews', 'videos', 'worldnews']
     for sub in default_subreddits:
-        searching(sub)
+        searching(sub.lower())
 
 def plot():
     cur.execute("""SELECT Subreddits.Name, sum(Postings.score) FROM Postings INNER JOIN Subreddits on Subreddits.ID = Postings.subreddit_id GROUP BY Subreddits.Name""")
@@ -237,7 +237,6 @@ def plot():
     data = [go.Bar(
             x=subreddits,
             y=scores,
-            text=scores,
             textposition = 'auto',
             marker=dict(
                 color='rgb(158,202,225)',
@@ -247,8 +246,29 @@ def plot():
             ),
             opacity=0.6
         )]
+    layout = go.Layout(
+            title = 'Cumulative Scores of Top 24 Hour Postings Per Subreddit Page',
+            xaxis=dict(
+                tickfont=dict(
+                    size=12,
+                    color='rgb(107, 107, 107)'
+                )
+            ),
+            yaxis=dict(
+                title='Cumulative Daily Scores',
+                titlefont=dict(
+                    size=14,
+                    color='rgb(107, 107, 107)'
+                ),
+                tickfont=dict(
+                    size=12,
+                    color='rgb(107, 107, 107)'
+                )
+            )
+        )
     print('opening...')
-    py.offline.plot(data, filename="subreddit_analysis.html")
+    fig = go.Figure(data = data, layout = layout)
+    py.offline.plot(fig, filename="subreddit_analysis.html")
 
 # ____________________________________________
 
