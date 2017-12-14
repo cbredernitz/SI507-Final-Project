@@ -43,29 +43,29 @@ Provided for you is a `config_sample.py` file.  This contains all the required v
 
 This program requires database connection using PostgreSQL. For documentation on installing PostgreSQL follow the links below:  
 
-For Mac:
-    Get homebrew:
-    Go to this link: https://brew.sh/
-    Copy the one line of code that they have on that page, which is this:
+**For Mac**:
+Get homebrew:
+Go to this link: https://brew.sh/
+Copy the one line of code that they have on that page, which is this:
 
-        `/usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"`
+`/usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"`
 
-    Open your Terminal and paste that entire line in. It will run for a while.
-    It may prompt you for your computer password (or it may not).
+Open your Terminal and paste that entire line in. It will run for a while.
+It may prompt you for your computer password (or it may not).
 
-    After homebrew is installed run:
+After homebrew is installed run:
 
-    `brew install postgres`
+`brew install postgres`
 
-    To start the connection to your database run:
+To start the connection to your database run:
 
-    `pg_ctl -D /usr/local/var/postgres start`
+`pg_ctl -D /usr/local/var/postgres start`
 
-    After that is comeplete, you are now connected to your Postgres database.  For simpler visualization, I use TeamSQL which can be downloaded [here](https://teamsql.io/)
+After that is comeplete, you are now connected to your Postgres database.  For simpler visualization, I use TeamSQL which can be downloaded [here](https://teamsql.io/)
 
-For Windows:
-    Follow the documentation provided at the link below:
-    ![a_link](https://labkey.org/Documentation/wiki-page.view?name=installPostgreSQLWindows)
+**For Windows**:
+
+Follow the documentation provided at the link below:    (https://labkey.org/Documentation/wiki-page.view?name=installPostgreSQLWindows)
 
  After the above is done, you are now ready to create a database to store all the data the program gathers. Run the following to create a database.  You can name the database whatever you'd like, however just be sure to remember what that is.
 
