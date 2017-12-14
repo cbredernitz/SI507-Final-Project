@@ -35,8 +35,7 @@ On this same file, you will need to unput you Reddit account username and passwo
 
 For complete reddit API documentation, please follow the links below:
     [Reddit API Quick Start Steps](https://github.com/reddit/reddit/wiki/OAuth2)
-    
-    [Complete Reddit API Request Types](https://www.reddit.com/dev/api/)
+    ![Complete Reddit API Request Types](https://www.reddit.com/dev/api/)
 
 ### Creating and Accessing Database
 
