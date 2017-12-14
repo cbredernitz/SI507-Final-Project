@@ -118,9 +118,9 @@ When you have data in your database, you can now run the plotting function as sh
 
 The database should look similar to this:
 
-![Postings](https://user-images.githubusercontent.com/20977403/34010349-60af6586-e0da-11e7-9b9d-6fe0d39e9c29.png)
+![Postings](https://user-images.githubusercontent.com/20977403/34019080-222ba45c-e0fb-11e7-8164-53754e8c79bc.png)
 
-![Subreddits](https://user-images.githubusercontent.com/20977403/34010369-73c2764a-e0da-11e7-9bd8-cfba6a9af55f.png)
+![Subreddits](https://user-images.githubusercontent.com/20977403/34019069-0e230ef0-e0fb-11e7-832a-f3a841c6e4e4.png)
 
 ____________________________________________
 
@@ -151,14 +151,18 @@ Provided for you is a sample post json file `sample_reddit_post.json`.  This nee
 ## Built With
 
 [Plotly](https://plot.ly/) - Data visualization
+
 [Requests](http://docs.python-requests.org/en/master/) - Sending requests to Reddit API
+
 [Psycopg2](http://initd.org/psycopg/) - PostgreSQL adapter for python
+
 [Reddit API](https://www.reddit.com/dev/api/) - Where the data came from
 
 ## Contributing
 
 * Caching help from Project 2
-* Help with SQL executes from section week 10 `itunes_database.py`
+* Help with SQL insert executes from section week 10 `itunes_database.py`
+* Special thanks to @anandpdoshi and @aerenchyma for the help with this project and for a great semester!
 
 ## Author
 
