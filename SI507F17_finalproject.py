@@ -3,12 +3,13 @@ import psycopg2
 import psycopg2.extras
 import requests
 import requests.auth
-from reddit_secret import client_id, client_secret, username, password
 import sys
 import os, datetime
 import plotly as py
 import plotly.graph_objs as go
 import webbrowser
+from reddit_secret import *
+from config import *
 
 CACHE_FNAME = 'cache_contents.json'
 CACHE_CREDS = 'creds.json'
@@ -21,14 +22,17 @@ USERNAME = username
 REDIRECT_URI = 'https://www.programsinformationpeople.org/runestone/oauth'
 AUTHORIZATION_URL = 'https://ssl.reddit.com/api/v1/authorize'
 TOKEN_URL = 'https://www.reddit.com/api/v1/access_token'
-SCOPE_STRING = ['identity', 'edit', 'flair', 'history', 'mysubreddits', 'privatemessages', 'read', 'report', 'save', 'submit', 'subscribe', 'vote', 'wikiedit', 'wikiread']
 
 CACHE_DICTION = {}
 
 ##### Setting up the database connection #####
 try:
-    conn = psycopg2.connect("dbname = '507_Final_Project_2' user = 'Chris'")
-    print("Success connecting to the database")
+    if db_password != "":
+        conn = psycopg2.connect("dbname = '{0}' user = '{1}' password = '{2}'".format(db_name, db_user, db_password))
+        print("Success connecting to the database")
+    else:
+        conn = psycopg2.connect("dbname = '{0}' user = '{1}'".format(db_name, db_user))
+        print("Success connecting to the database")
 
 except:
     print("Unable to connect to the database")
@@ -55,7 +59,7 @@ def setup_database():
 
     conn.commit()
 
-##### Caching function from Project 2 #####
+#  Checks cache file if older than 1 day
 def check_cache_time():
     t = os.path.getctime('cache_contents.json')
     created_time = datetime.datetime.fromtimestamp(t)
@@ -72,6 +76,7 @@ def check_cache_time():
     else:
         return True
 
+#  Loads cache into global CACHE_DICTION
 def load_cache():
     global CACHE_DICTION
     try:
@@ -87,6 +92,7 @@ def load_cache():
     except:
         CACHE_DICTION = {}
 
+#  Saves cache contents into a json file
 def save_cache():
     full_text = json.dumps(CACHE_DICTION)
     cache_file_ref = open(CACHE_FNAME,"w")
@@ -106,6 +112,7 @@ def save_token(token_dict):
         token_json = json.dumps(token_dict)
         creds.write(token_json)
 
+#  Checks token file if older than 1 hour
 def check_token_time():
     t = os.path.getctime('creds.json')
     created_time = datetime.datetime.fromtimestamp(t)
@@ -122,24 +129,28 @@ def check_token_time():
     else:
         return True
 
-#  Authenticates and creates an instance of authentication to call to
+#  Authenticates and saves token
 def start_reddit_session():
     client_auth = requests.auth.HTTPBasicAuth(client_id, client_secret)
     post_data = {'grant_type': 'password', 'username': USERNAME, 'password': PASSWORD}
-    headers = {"User-Agent": "test script by /u/" + username}
+    headers = {"User-Agent": "test script by /u/" + USERNAME}
     response = requests.post("https://www.reddit.com/api/v1/access_token", auth=client_auth, data=post_data, headers=headers)
     cred = json.loads(response.text)
     save_token(cred)
 
-
 def make_request(subreddit):
-    token = get_saved_token()
+    try:
+        token = get_saved_token()
+    except:
+        start_reddit_session()
+        token = get_saved_token()
 
     if check_token_time():
         start_reddit_session()
+        token = get_saved_token()
 
     else:
-        headers = {"Authorization": "bearer "+ token, "User-Agent": "test script by /u/Inept_P_Hacker"}
+        headers = {"Authorization": "bearer "+ token, "User-Agent": "test script by /u/" + username}
         params = {}
         response2 = requests.get("https://oauth.reddit.com/r/" + subreddit, headers=headers, params = {'sort': 'top', 't': 'day'})
         return json.loads(response2.text)
@@ -171,12 +182,18 @@ class Post(object):
         return {'subreddit': self.subreddit}
 
     def __contains__(self):
-        pass
+        if self.gilded > 0:
+            return True
+        else:
+            return False
 
     def __repr__(self):
-        pass
+        return "{0}: Title - '{1}' has a score of {2}".format(
+                                                            self.subreddit,
+                                                            self.title,
+                                                            self.score)
 
-
+#  Returns data from each subreddit either from the cache or from a new request
 def get_cache_or_live_data(subreddit):
     if subreddit not in CACHE_DICTION:
         print("-- Fetching new content for the day's activity for " + subreddit + " --")
@@ -188,7 +205,7 @@ def get_cache_or_live_data(subreddit):
         results = CACHE_DICTION
     return CACHE_DICTION[subreddit]
 
-
+#  Inserts the data into the database
 def searching(subreddit):
     response = get_cache_or_live_data(subreddit)
     for post_dict in response['data']['children']:
@@ -211,6 +228,7 @@ def searching(subreddit):
 
         conn.commit()
 
+#  Runs a search on each of the default subreddits
 def run_search_on_default():
     default_subreddits = ['art', 'AskReddit', 'askscience', 'aww',
                     'blog', 'books', 'creepy', 'dataisbeautiful', 'DIY', 'Documentaries',
@@ -225,6 +243,8 @@ def run_search_on_default():
     for sub in default_subreddits:
         searching(sub.lower())
 
+#  Pulls and accumulates each subreddit's total posting score from the database.
+#  After, it plots the data into a simple bar graph
 def plot():
     cur.execute("""SELECT Subreddits.Name, sum(Postings.score) FROM Postings INNER JOIN Subreddits on Subreddits.ID = Postings.subreddit_id GROUP BY Subreddits.Name""")
     dic = cur.fetchall()
@@ -239,18 +259,19 @@ def plot():
             y=scores,
             textposition = 'auto',
             marker=dict(
-                color='rgb(158,202,225)',
+                color='rgb(255,140,0)',
                 line=dict(
                     color='rgb(8,48,107)',
                     width=1.5),
             ),
-            opacity=0.6
+            opacity=0.8
         )]
     layout = go.Layout(
             title = 'Cumulative Scores of Top 24 Hour Postings Per Subreddit Page',
             xaxis=dict(
+                tickangle=45,
                 tickfont=dict(
-                    size=12,
+                    size=10,
                     color='rgb(107, 107, 107)'
                 )
             ),
@@ -270,8 +291,7 @@ def plot():
     fig = go.Figure(data = data, layout = layout)
     py.offline.plot(fig, filename="subreddit_analysis.html")
 
-# ____________________________________________
-
+# _________________________________________________________
 if __name__ == "__main__":
     command = None
     subreddit = None
@@ -283,9 +303,6 @@ if __name__ == "__main__":
     if command == 'setup':
         setup_database()
         print('-- Setting up database --')
-
-    elif command == 'token':
-        start_reddit_session()
 
     elif command == 'write':
         load_cache()
