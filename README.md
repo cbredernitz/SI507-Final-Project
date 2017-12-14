@@ -34,6 +34,7 @@ After that is complete you will have a client_id and client_secret from your app
 On this same file, you will need to unput you Reddit account username and password in the sample file provided.  This is required to make a successful request to the Reddit API.
 
 For complete reddit API documentation, please follow the links below:
+
 [Reddit API Quick Start Steps](https://github.com/reddit/reddit/wiki/OAuth2)
     
 [Complete Reddit API Request Types](https://www.reddit.com/dev/api/)
