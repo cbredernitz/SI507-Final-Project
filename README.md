@@ -174,4 +174,6 @@ Provided for you is a sample post json file `sample_reddit_post.json`.  This nee
 
 This program heavily relies on the database.  If connection is lost then the program will not run.
 
-If, for some reason, there is an issue with a subreddit returning a NoneType error, change the capitalization in the `default_subreddits` list under the run_search_on_default() function.  I noticed that some random calls would throw this error randomly.  Originally, I though that using a .lower() in the for loop would work, but sometimes that also threw the error.  
+If, for some reason, there is an issue with a subreddit returning a ''Check the subreddit name' in the terminal, change the capitalization in the `default_subreddits` list under the run_search_on_default() function.  I noticed that some random calls would throw this error randomly.  Originally, I though that using a .lower() in the for loop would work, but sometimes that also threw the error.  
+
+To add more or take away subreddits in this visualization, just add/subtract them from the `default_subreddits` list in the `run_search_on_subreddits()` function.
