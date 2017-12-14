@@ -44,6 +44,7 @@ Provided for you is a `config_sample.py` file.  This contains all the required v
 This program requires database connection using PostgreSQL. For documentation on installing PostgreSQL follow the links below:  
 
 **For Mac**:
+
 Get homebrew:
 Go to this link: https://brew.sh/
 Copy the one line of code that they have on that page, which is this:
@@ -61,7 +62,7 @@ To start the connection to your database run:
 
 `pg_ctl -D /usr/local/var/postgres start`
 
-After that is comeplete, you are now connected to your Postgres database.  For simpler visualization, I use TeamSQL which can be downloaded [here](https://teamsql.io/)
+After that is complete, you are now connected to your Postgres database.  For simpler visualization, I use TeamSQL which can be downloaded [here](https://teamsql.io/)
 
 **For Windows**:
 
@@ -83,19 +84,27 @@ python3 SI507F17_finalproject.py
 
 You should see a readout in your terminal of 'Success connecting to the database'
 
+____________________________________________
+
 To set up the structure of the database, run the following:
 
 ```
 python3 SI507F17_finalproject.py setup  
 ```
 
+This `setup` command creates the database tables for storing the data that we pull later on by running the `setup_database()` function.
+
 If you open up TeamSQL and look at the database, it should contain two tables.  One for Subreddits and the other for Postings.
+
+____________________________________________
 
 To get the data from each subreddit written into the database, run the following:
 
 ```
 python3 SI507F17_finalproject.py write
 ```
+
+This `write` command runs the `start_reddit_session(), load_cache(), and run_search_on_default()` functions.  The `start_reddit_session()` does, as you would guess, start the reddit request session saving a token in the 'creds.json' file.  The `load_cache()` functions loads the cache into the CACHE_DICTION variable, but if the cache file is older than a day, it deletes the file and makes a new cache_file for the day.  The `run_search_on_default()` function finally pulls all this together and iterates over a static list containing default subreddits that each account is automatically subscribed to when they create a reddit account.  It then checks to see if it is making a new request or pulling from the database for each subreddit and inputing the data into the database.
 
 When the program is pulling from the database, you will see the following in your terminal.
 
@@ -107,10 +116,21 @@ Otherwise, your output will look like this:
 
 When you have data in your database, you can now run the plotting function as shown below:
 
+The database should look similar to this:
+
+![Postings](https://user-images.githubusercontent.com/20977403/34010349-60af6586-e0da-11e7-9b9d-6fe0d39e9c29.png)
+
+![Subreddits](https://user-images.githubusercontent.com/20977403/34010369-73c2764a-e0da-11e7-9bd8-cfba6a9af55f.png)
+
+____________________________________________
+
+To create a plot, run the following command in your terminal
 
 ```
 python3 SI507F17_finalproject.py plot
 ```
+
+The `plot` command runs the `plot()` function.  Connection and storage of data into the database is required for this function to work.  The function runs an SQL query collecting the sum of each post's score, inner joining the tables on their foreign key (ID and subreddit_id), and grouping the sum by the Subreddit's name.  After running a .fetchall(), we are left with a list containing the sum of scores and the subreddit name associated.  After unpacking the list, we then use Plotly to create a visual of the data collected.
 
 The bar chart should open automatically in Google Chrome, however, if that doesn't appear to be the case, go into the directory and open the file `subreddit_analysis.html` in your webbrowser.
 
@@ -118,18 +138,34 @@ Example output after running `plot`:
 
 ![ExamplePlot](https://user-images.githubusercontent.com/20977403/34006220-8f7d7dda-e0cb-11e7-8554-d726378acf04.png)
 
-Running the program each time will require a `write` command followed by a `plot` command.  Write to get all data into the database, and plot to plot the data
+____________________________________________
+
+Running the program each time will require a `write` command followed by a `plot` command.  Write to get all data into the database, and plot to plot the data.
 
 ## Running the tests
 
 The SI507F17_finalproject_tests.py file included contains all test cases for this program.  If you are having issues with getting through the installation steps, please run these tests.  It will give you an idea of what where the issue is.
 
+Provided for you is a sample post json file `sample_reddit_post.json`.  This needs to be in your folder for some of the test functions.
+
+## Built With
+
+[Plotly](https://plot.ly/) - Data visualization
+[Requests](http://docs.python-requests.org/en/master/) - Sending requests to Reddit API
+[Psycopg2](http://initd.org/psycopg/) - PostgreSQL adapter for python
+[Reddit API](https://www.reddit.com/dev/api/) - Where the data came from
+
 ## Contributing
 
+* Caching help from Project 2
+* Help with SQL executes from section week 10 `itunes_database.py`
 
-## Authors
+## Author
 
 * **Christopher Bredernitz**
 
-
 ## Acknowledgments
+
+This program heavily relies on the database.  If connection is lost then the program will not run.
+
+If, for some reason, there is an issue with a subreddit returning a NoneType error, change the capitalization in the `default_subreddits` list under the run_search_on_default() function.  I noticed that some random calls would throw this error randomly.  Originally, I though that using a .lower() in the for loop would work, but sometimes that also threw the error.  

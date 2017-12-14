@@ -58,9 +58,16 @@ class Test_Make_Request(unittest.TestCase):
         self.request = make_request('Superbowl')
         self.post_dict = self.request['data']['children'][0]
         self.post_inst = Post(self.post_dict)
+        self.token = open('creds.json')
 
     def test_live_request_dict(self):
         self.assertEqual({'subreddit': 'Superbowl'}, self.post_inst.get_subreddit())
+
+    def test_live_repr(self):
+        self.assertEqual(self.post_inst.__repr__(), "{0}: Title - '{1}' has a score of {2}".format(self.post_inst.subreddit, self.post_inst.title, self.post_inst.score))
+
+    def test_save_token(self):
+        self.assertTrue(self.token.read())
 
     def test_live_instance_constructor(self):
         self.assertIsInstance(self.post_inst.title, str)
@@ -75,6 +82,7 @@ class Test_Make_Request(unittest.TestCase):
         self.request
         self.post_dict
         self.post_inst
+        self.token.close()
 
 
 class Test_timer_functions(unittest.TestCase):
@@ -91,7 +99,7 @@ class Test_timer_functions(unittest.TestCase):
             self.assertTrue(self.check)
 
     def test_cache_timer(self):
-        self.t = os.path.getctime('cache_contents.json')
+        self.t = os.path.getctime('sample_cache_contents.json')
         self.created_time = datetime.datetime.fromtimestamp(self.t)
         self.now = datetime.datetime.now()
         self.delta = self.now - self.created_time
@@ -102,13 +110,18 @@ class Test_timer_functions(unittest.TestCase):
         else:
             self.assertTrue(self.check)
 
+
 class Test_Plot_Output(unittest.TestCase):
     def setUp(self):
         plot()
         self.f = open("subreddit_analysis.html")
+        self.read = self.f.read()
 
     def test_plot(self):
-        self.assertTrue(self.f.read())
+        self.assertTrue(self.read)
+
+    def test_plot_template(self):
+        self.assertIn("""{"title": "Cumulative Scores of Top 24 Hour Postings Per Subreddit Page""", self.read)
 
     def tearDown(self):
         self.f.close()

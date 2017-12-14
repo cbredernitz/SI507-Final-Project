@@ -138,6 +138,7 @@ def start_reddit_session():
     cred = json.loads(response.text)
     save_token(cred)
 
+#  Makes a request to the Reddit API
 def make_request(subreddit):
     try:
         token = get_saved_token()
@@ -150,7 +151,7 @@ def make_request(subreddit):
         token = get_saved_token()
 
     else:
-        headers = {"Authorization": "bearer "+ token, "User-Agent": "test script by /u/" + username}
+        headers = {"Authorization": "bearer "+ token, "User-Agent": "subreddit top scores script by /u/" + username}
         params = {}
         response2 = requests.get("https://oauth.reddit.com/r/" + subreddit, headers=headers, params = {'sort': 'top', 't': 'day'})
         return json.loads(response2.text)
@@ -208,40 +209,43 @@ def get_cache_or_live_data(subreddit):
 #  Inserts the data into the database
 def searching(subreddit):
     response = get_cache_or_live_data(subreddit)
-    for post_dict in response['data']['children']:
-        post_obj = Post(post_dict)
-        cur.execute("""INSERT INTO
-            Subreddits(Name)VALUES(%(subreddit)s)on CONFLICT DO NOTHING RETURNING ID""", post_obj.get_subreddit())
+    if response == None:
+        print("Check the subreddit name")
+    else:
+        for post_dict in response['data']['children']:
+            post_obj = Post(post_dict)
+            cur.execute("""INSERT INTO
+                Subreddits(Name)VALUES(%(subreddit)s)on CONFLICT DO NOTHING RETURNING ID""", post_obj.get_subreddit())
 
-        conn.commit()
+            conn.commit()
 
-        try:
-            subreddit_id = cur.fetchone()
-            subreddit_id = subreddit_id['id']
+            try:
+                subreddit_id = cur.fetchone()
+                subreddit_id = subreddit_id['id']
 
-        except:
-            cur.execute("SELECT Subreddits.ID FROM Subreddits WHERE Subreddits.Name = %s", (post_obj.subreddit,))
-            subreddit_id = cur.fetchone()
-            subreddit_id = subreddit_id['id']
+            except:
+                cur.execute("SELECT Subreddits.ID FROM Subreddits WHERE Subreddits.Name = %s", (post_obj.subreddit,))
+                subreddit_id = cur.fetchone()
+                subreddit_id = subreddit_id['id']
 
-        cur.execute("""INSERT INTO Postings(subreddit_id, title, score, created_time, gilded, permalink, kind) VALUES(%s, %s, %s, %s, %s, %s, %s) on conflict do nothing""", (subreddit_id, post_obj.title, post_obj.score, post_obj.time_created, post_obj.gilded, post_obj.permalink, post_obj.kind))
+            cur.execute("""INSERT INTO Postings(subreddit_id, title, score, created_time, gilded, permalink, kind) VALUES(%s, %s, %s, %s, %s, %s, %s) on conflict do nothing""", (subreddit_id, post_obj.title, post_obj.score, post_obj.time_created, post_obj.gilded, post_obj.permalink, post_obj.kind))
 
-        conn.commit()
+            conn.commit()
 
 #  Runs a search on each of the default subreddits
 def run_search_on_default():
     default_subreddits = ['art', 'AskReddit', 'askscience', 'aww',
-                    'blog', 'books', 'creepy', 'dataisbeautiful', 'DIY', 'Documentaries',
+                    'blog', 'Books', 'creepy', 'dataisbeautiful', 'DIY', 'Documentaries',
                     'EarthPorn', 'explainlikeimfive', 'food', 'funny', 'Futurology',
                     'gadgets', 'gaming', 'GetMotivated', 'gifs', 'history', 'IAmA',
                     'InternetIsBeautiful', 'Jokes', 'LifeProTips', 'listentothis',
                     'mildlyinteresting', 'movies', 'Music', 'news', 'nosleep',
                     'nottheonion', 'OldSchoolCool', 'personalfinance', 'philosophy',
-                    'photoshopbattles', 'pics', 'science', 'Showerthoughts',
+                    'photoshopbattles', 'science', 'Showerthoughts',
                     'space', 'sports', 'television', 'tifu', 'todayilearned',
                     'UpliftingNews', 'videos', 'worldnews']
     for sub in default_subreddits:
-        searching(sub.lower())
+        searching(sub)
 
 #  Pulls and accumulates each subreddit's total posting score from the database.
 #  After, it plots the data into a simple bar graph
@@ -305,6 +309,7 @@ if __name__ == "__main__":
         print('-- Setting up database --')
 
     elif command == 'write':
+        start_reddit_session()
         load_cache()
         run_search_on_default()
 
