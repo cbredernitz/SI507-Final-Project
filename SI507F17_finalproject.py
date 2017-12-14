@@ -157,8 +157,8 @@ def make_request(subreddit):
         return json.loads(response2.text)
 
 
+#  Organizes each post dictionary into a class instance
 class Post(object):
-    """Organizing data of each reddit post"""
     def __init__(self, post_dict):
         self.title = post_dict['data']['title'][:255]
         self.subreddit = post_dict['data']['subreddit']
