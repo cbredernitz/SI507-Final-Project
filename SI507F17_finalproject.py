@@ -51,9 +51,9 @@ def setup_database():
                 ID SERIAL PRIMARY KEY,
                 Title VARCHAR(255) NOT NULL,
                 Score INTEGER NOT NULL,
-                Created_Time VARCHAR(128) NOT NULL,
+                Created_Time VARCHAR(128),
                 Subreddit_ID INTEGER REFERENCES Subreddits(ID),
-                Gilded INTEGER NOT NULL,
+                Gilded INTEGER,
                 Permalink TEXT,
                 Kind TEXT)""")
 
