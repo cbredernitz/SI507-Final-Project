@@ -1,4 +1,4 @@
-# Default Subreddit Top Daily Score Visualization
+# Default Subreddit Top 25 Scores Sorted by Daily Visualization
 
 ![Python](https://img.shields.io/badge/python-v3.6-blue.svg)
 
