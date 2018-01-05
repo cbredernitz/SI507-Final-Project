@@ -1,6 +1,7 @@
 import unittest
 from SI507F17_finalproject import *
 
+
 class Testing_Import_files(unittest.TestCase):
     def setUp(self):
         self.reddit = open("reddit_secret.py")

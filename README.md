@@ -1,4 +1,4 @@
-# Default Subreddit Top Daily Score Visualization
+# Top 4 Daily Scores of Default Subreddits Visualization
 
 ![Python](https://img.shields.io/badge/python-v3.6-blue.svg)
 
@@ -34,8 +34,10 @@ After that is complete you will have a client_id and client_secret from your app
 On this same file, you will need to unput you Reddit account username and password in the sample file provided.  This is required to make a successful request to the Reddit API.
 
 For complete reddit API documentation, please follow the links below:
-    [Reddit API Quick Start Steps](https://github.com/reddit/reddit/wiki/OAuth2)
-    ![Complete Reddit API Request Types](https://www.reddit.com/dev/api/)
+
+[Reddit API Quick Start Steps](https://github.com/reddit/reddit/wiki/OAuth2)
+    
+[Complete Reddit API Request Types](https://www.reddit.com/dev/api/)
 
 ### Creating and Accessing Database
 
@@ -172,4 +174,8 @@ Provided for you is a sample post json file `sample_reddit_post.json`.  This nee
 
 This program heavily relies on the database.  If connection is lost then the program will not run.
 
-If, for some reason, there is an issue with a subreddit returning a NoneType error, change the capitalization in the `default_subreddits` list under the run_search_on_default() function.  I noticed that some random calls would throw this error randomly.  Originally, I though that using a .lower() in the for loop would work, but sometimes that also threw the error.  
+If, for some reason, there is an issue with a subreddit returning a ''Check the subreddit name' in the terminal, change the capitalization in the `default_subreddits` list under the run_search_on_default() function.  I noticed that some random calls would throw this error randomly.  Originally, I though that using a .lower() in the for loop would work, but sometimes that also threw the error.  
+
+To add more or take away subreddits in this visualization, just add/subtract them from the `default_subreddits` list in the `run_search_on_subreddits()` function.
+
+Issue with the Reddit API where even with a specified limit of 4, the api sometimes retunrs 5 entries and 4 for others.
