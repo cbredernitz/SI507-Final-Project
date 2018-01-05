@@ -4,7 +4,8 @@ import psycopg2.extras
 import requests
 import requests.auth
 import sys
-import os, datetime
+import os
+from datetime import *
 import plotly as py
 import plotly.graph_objs as go
 import webbrowser
@@ -62,8 +63,8 @@ def setup_database():
 #  Checks cache file if older than 1 day
 def check_cache_time():
     t = os.path.getctime('cache_contents.json')
-    created_time = datetime.datetime.fromtimestamp(t)
-    now = datetime.datetime.now()
+    created_time = datetime.fromtimestamp(t)
+    now = datetime.now()
 
     # subtracting two datetime objects gives you a timedelta object
     delta = now - created_time
@@ -115,8 +116,8 @@ def save_token(token_dict):
 #  Checks token file if older than 1 hour
 def check_token_time():
     t = os.path.getctime('creds.json')
-    created_time = datetime.datetime.fromtimestamp(t)
-    now = datetime.datetime.now()
+    created_time = datetime.fromtimestamp(t)
+    now = datetime.now()
 
     # subtracting two datetime objects gives you a timedelta object
     delta = now - created_time
@@ -151,14 +152,19 @@ def make_request(subreddit):
         token = get_saved_token()
 
     else:
+        now = datetime.now()
+        yesterday = now - timedelta(1)
         headers = {"Authorization": "bearer "+ token, "User-Agent": "subreddit top scores script by /u/" + username}
         params = {}
-        response2 = requests.get("https://oauth.reddit.com/r/" + subreddit, headers=headers, params = {'sort': 'top', 't': 'day'})
+        response2 = requests.get("https://oauth.reddit.com/r/" + subreddit, headers=headers, params = {'sort': 'top',
+                                'before': now,
+                                'after': yesterday,
+                                'limit': 4})
         return json.loads(response2.text)
 
 
+#  Organizes each post dictionary into a class instance
 class Post(object):
-    """Organizing data of each reddit post"""
     def __init__(self, post_dict):
         self.title = post_dict['data']['title'][:255]
         self.subreddit = post_dict['data']['subreddit']
